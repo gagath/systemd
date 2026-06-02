@@ -1030,6 +1030,10 @@ def pe_add_sections(opts: UkifyConfig, uki: UKI, output: str) -> None:
 
         new_section.IMAGE_SCN_MEM_READ = True
         if section.name == '.linux':
+            # Align kernel on 64k
+            new_section.VirtualAddress = round_up(new_section.VirtualAddress, 0x10000)
+            new_section.PointerToRawData = round_up(new_section.PointerToRawData, 0x10000)
+
             # Old kernels that use EFI handover protocol will be executed inline.
             new_section.IMAGE_SCN_CNT_CODE = True
 
