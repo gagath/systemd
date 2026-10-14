@@ -351,6 +351,7 @@ EFI_STATUS devicetree_apply_overlay_memory(
                 struct devicetree_state *state,
                 void *dtbo_buffer,
                 size_t dtbo_length) {
+
 #if HAVE_LIBFDT
         _cleanup_free_ char *overlay = NULL;
         EFI_STATUS err;
@@ -358,6 +359,11 @@ EFI_STATUS devicetree_apply_overlay_memory(
         assert(state);
         assert(dtbo_buffer);
         assert(dtbo_length);
+
+        /* Capture the original value for the devicetree table. NULL is not an error in this case so we don't
+         * need to check the return value. NULL simply means the system fw had no devicetree initially (and
+         * is the correct value to use to return to the initial state if needed). */
+        state->orig = find_configuration_table(MAKE_GUID_PTR(EFI_DTB_TABLE));
 
         /* If no base devicetree has been installed yet, use the firmware-provided one */
         if (!state->pages) {
@@ -428,6 +434,9 @@ EFI_STATUS devicetree_apply_overlay_memory(
                                 "Failed to prepare devicetree for overlay: fdt error %d", fdterr);
 
         fdterr = fdt_overlay_apply(base, dtbo_buffer);
+        // FIXME: According to the libfdt documentation, even if the function fails it should be expected that
+        // the base device tree is modified. As such in an error case should we restore it from original? Either here or in
+        // the calling function. (Same goes for non-memory overlay application in systemd-boot)
         if (fdterr < 0)
                 return log_error_status(EFI_LOAD_ERROR,
                                 "Failed to apply devicetree overlay fdt error %d", fdterr);
